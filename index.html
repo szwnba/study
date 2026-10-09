@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>我的学习小软件 · 四年级</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; height:100dvh; background:#0e1320; color:#eaf0fb;
+              font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+              overflow:hidden; overscroll-behavior:none; touch-action:none; position:fixed; width:100%; }
+  #app { position:fixed; inset:0; display:flex; flex-direction:column; height:100%; height:100dvh; overflow:hidden; }
+  /* 顶栏 */
+  #top { flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:10px 14px;
+         background:linear-gradient(135deg,#2a3c66,#3b2f66); color:#fff; box-shadow:0 2px 12px rgba(0,0,0,.4); }
+  #top .logo { font-size:20px; }
+  #top h1 { font-size:16px; font-weight:800; letter-spacing:.5px; }
+  #top .sub { font-size:11px; opacity:.8; font-weight:400; }
+  #back { margin-left:auto; font-size:13px; padding:6px 12px; border:none; border-radius:20px;
+          background:rgba(255,255,255,.18); color:#fff; cursor:pointer; display:none; }
+  #back:active { transform:scale(.96); }
+  /* 内容区 */
+  #content { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px; touch-action:auto; }
+  #content::-webkit-scrollbar { width:0; }
+  .section { margin-bottom:18px; }
+  .sec-title { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; margin:4px 2px 10px; }
+  .sec-title .dot { width:10px; height:10px; border-radius:50%; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .tile { position:relative; border-radius:16px; padding:14px 12px; cursor:pointer; overflow:hidden;
+          background:#19223a; border:1px solid #2a3450; transition:transform .12s, box-shadow .12s; }
+  .tile:active { transform:translateY(2px); }
+  .tile .emo { font-size:26px; }
+  .tile .t { font-size:14px; font-weight:700; margin-top:6px; }
+  .tile .d { font-size:10px; color:#9fb0cc; margin-top:2px; line-height:1.4; }
+  /* 英语单词卡：字大一点、卡片大一点点 */
+  .tile.vcard { padding:18px 14px; }
+  .tile.vcard .emo { font-size:30px; }
+  .tile.vcard .t { font-size:21px; font-weight:800; }
+  .tile.vcard .d { font-size:12px; margin-top:6px; }
+  .tile .badge { position:absolute; right:10px; top:10px; font-size:18px; opacity:.5; }
+  /* 通用卡片/按钮 */
+  .card { background:#19223a; border:1px solid #2a3450; border-radius:14px; padding:14px; margin-bottom:12px; }
+  .pill { display:inline-block; font-size:11px; padding:2px 9px; border-radius:20px; background:#26314f; color:#bcd0f0; margin-right:6px; }
+  .btn { font-size:13px; padding:9px 16px; border:none; border-radius:10px; cursor:pointer; font-weight:700;
+         background:linear-gradient(180deg,#ffd86b,#f0a93c); color:#2a1c00; }
+  .btn:active { transform:translateY(1px); }
+  .btn.ghost { background:#222c47; color:#cdd8ec; }
+  .btn.sm { padding:6px 12px; font-size:12px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .muted { color:#9fb0cc; font-size:12px; }
+  textarea { width:100%; min-height:120px; background:#0f1626; color:#eaf0fb; border:1px solid #2a3450;
+             border-radius:10px; padding:10px; font-size:14px; line-height:1.6; font-family:inherit; resize:vertical; }
+  input[type=text], input[type=number] { background:#0f1626; color:#eaf0fb; border:1px solid #2a3450;
+             border-radius:10px; padding:9px 12px; font-size:15px; font-family:inherit; }
+  .opt { display:block; width:100%; text-align:left; margin:7px 0; padding:10px 12px; border-radius:10px;
+         background:#0f1626; border:1px solid #2a3450; color:#eaf0fb; font-size:14px; cursor:pointer; }
+  .opt:active { transform:scale(.99); }
+  .opt.ok { background:#163a25; border-color:#2fae5e; color:#9dffb8; }
+  .opt.no { background:#3a1620; border-color:#e0566e; color:#ffb3c0; }
+  .feedback { font-size:13px; font-weight:700; margin-top:8px; }
+  .flip { perspective:800px; }
+  .flip .inner { transition:transform .5s; transform-style:preserve-3d; }
+  .flip.done .inner { transform:rotateY(180deg); }
+  .face { backface-visibility:hidden; }
+  .face.back { transform:rotateY(180deg); }
+  .pinyin { color:#7fd3ff; font-size:13px; letter-spacing:1px; }
+  .poemline { font-size:19px; line-height:1.9; font-weight:600; }
+  .score { font-size:13px; color:#ffd86b; font-weight:700; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#1f2a45; color:#fff;
+           padding:9px 16px; border-radius:20px; font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.5); opacity:0; transition:opacity .25s; z-index:50; }
+  .toast.show { opacity:1; }
+  .hl { color:#ffd86b; }
+</style>
+</head>
+<body>
+<noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0e1320;color:#ffd86b;font-size:16px;text-align:center;padding:24px">本学习软件需要 JavaScript 才能运行，请用 Chrome / Edge / Safari 打开本文件。</div></noscript>
+<div id="app">
+  <div id="top">
+    <span class="logo">📚</span>
+    <div><h1>我的学习小软件</h1><div class="sub">四年级上册 · 语文(人教版) · 数学(北师大版) · 英语(沪教版)</div></div>
+    <button id="back">← 返回面板</button>
+  </div>
+  <div id="content"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const content = $('#content');
+const backBtn = $('#back');
+let current = 'home';
+
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1400); }
+function speak(text, lang){ try{ if(!('speechSynthesis' in window)){ toast('当前环境不支持朗读'); return; } const u=new SpeechSynthesisUtterance(text); u.lang=lang||'zh-CN'; u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+/* ===================== 数据（按指定教材上册整理） =====================
+   语文：人教版 四年级上册 ｜ 数学：北师大版 四年级上册 ｜ 英语：沪教版（牛津）四年级上册 */
+const POEMS = [
+  {title:'暮江吟', author:'白居易', dynasty:'唐',
+   lines:['一道残阳铺水中，','半江瑟瑟半江红。','可怜九月初三夜，','露似真珠月似弓。'],
+   pin:['yī dào cán yáng pū shuǐ zhōng','bàn jiāng sè sè bàn jiāng hóng','kě lián jiǔ yuè chū sān yè','lù sì zhēn zhū yuè sì gōng'],
+   mean:'夕阳西沉，晚霞铺洒在江面上，江水一半碧绿一半艳红。最可爱的是九月初三的夜晚，露水像珍珠，弯月像一张弓。'},
+  {title:'题西林壁', author:'苏轼', dynasty:'宋',
+   lines:['横看成岭侧成峰，','远近高低各不同。','不识庐山真面目，','只缘身在此山中。'],
+   pin:['héng kàn chéng lǐng cè chéng fēng','yuǎn jìn gāo dī gè bù tóng','bù shí lú shān zhēn miàn mù','zhǐ yuán shēn zài cǐ shān zhōng'],
+   mean:'从正面看是连绵山岭，侧面看是陡峭山峰，远近高低各不相同。看不清庐山真正的面貌，只因为自己就身处这座山中。'},
+  {title:'雪梅', author:'卢梅坡', dynasty:'宋',
+   lines:['梅雪争春未肯降，','骚人阁笔费评章。','梅须逊雪三分白，','雪却输梅一段香。'],
+   pin:['méi xuě zhēng chūn wèi kěn xiáng','sāo rén gé bǐ fèi píng zhāng','méi xū xùn xuě sān fēn bái','xuě què shū méi yī duàn xiāng'],
+   mean:'梅花和雪花争着报春都不肯认输，诗人放下笔也难评高下。梅花比雪少三分白，雪却输给梅花一段清香。'},
+  {title:'出塞', author:'王昌龄', dynasty:'唐',
+   lines:['秦时明月汉时关，','万里长征人未还。','但使龙城飞将在，','不教胡马度阴山。'],
+   pin:['qín shí míng yuè hàn shí guān','wàn lǐ cháng zhēng rén wèi huán','dàn shǐ lóng chéng fēi jiàng zài','bù jiào hú mǎ dù yīn shān'],
+   mean:'还是秦汉时的明月和边关，远征的将士至今没有回还。只要有像飞将军那样的名将，绝不会让敌人的兵马越过阴山。'},
+  {title:'凉州词', author:'王翰', dynasty:'唐',
+   lines:['葡萄美酒夜光杯，','欲饮琵琶马上催。','醉卧沙场君莫笑，','古来征战几人回。'],
+   pin:['pú táo měi jiǔ yè guāng bēi','yù yǐn pí pá mǎ shàng cuī','zuì wò shā chǎng jūn mò xiào','gǔ lái zhēng zhàn jǐ rén huí'],
+   mean:'葡萄美酒盛在夜光杯里，正要举杯，琵琶声已催人出发。即使醉倒在沙场上请你别笑，自古出征的人有几个能活着回来。'},
+  {title:'夏日绝句', author:'李清照', dynasty:'宋',
+   lines:['生当作人杰，','死亦为鬼雄。','至今思项羽，','不肯过江东。'],
+   pin:['shēng dāng zuò rén jié','sǐ yì wéi guǐ xióng','zhì jīn sī xiàng yǔ','bù kěn guò jiāng dōng'],
+   mean:'活着应当做人中豪杰，死了也要做鬼中英雄。到现在人们还思念项羽，他宁死也不肯苟且回到江东。'},
+  {title:'鹿柴', author:'王维', dynasty:'唐',
+   lines:['空山不见人，','但闻人语响。','返景入深林，','复照青苔上。'],
+   pin:['kōng shān bù jiàn rén','dàn wén rén yǔ xiǎng','fǎn jǐng rù shēn lín','fù zhào qīng tái shàng'],
+   mean:'空旷的山里看不见人，只听见有人说话的回声。夕阳的余晖返照进幽深的树林，又洒落在青苔之上。'},
+  {title:'嫦娥', author:'李商隐', dynasty:'唐',
+   lines:['云母屏风烛影深，','长河渐落晓星沉。','嫦娥应悔偷灵药，','碧海青天夜夜心。'],
+   pin:['yún mǔ píng fēng zhú yǐng shēn','cháng hé jiàn luò xiǎo xīng chén','cháng é yīng huǐ tōu líng yào','bì hǎi qīng tiān yè yè xīn'],
+   mean:'云母屏风上映着深深的烛影，银河渐落、晨星下沉。嫦娥应该后悔偷吃了灵药，如今独自面对碧海青天，夜夜孤寂。'},
+  {title:'别董大', author:'高适', dynasty:'唐',
+   lines:['千里黄云白日曛，','北风吹雁雪纷纷。','莫愁前路无知己，','天下谁人不识君。'],
+   pin:['qiān lǐ huáng yún bái rì xūn','běi fēng chuī yàn xuě fēn fēn','mò chóu qián lù wú zhī jǐ','tiān xià shuí rén bù shí jūn'],
+   mean:'千里黄云遮暗了白日，北风吹送大雁、大雪纷纷。不要担心前路没有知己，普天之下谁不认识你董大。'}
+];
+const ESSAY_TOPICS = [
+  {t:'推荐一个好地方', tip:['写清楚是哪里','写那里好看、好玩的地方','说清为什么推荐它'], sample:'我要推荐家乡的小公园。那里有碧绿的小湖，湖面上有几只鸭子。我最喜欢傍晚在湖边散步，微风吹来特别舒服。欢迎大家来玩！'},
+  {t:'我的家人', tip:['选一位家人来写','写出他/她的一个特点','用一件小事来说明'], sample:'我的爷爷很爱笑。有一次我考试没考好，他摸摸我的头说：“没关系，咱们一起找原因。”看着他温和的笑脸，我一下子就不难过了。'},
+  {t:'写观察日记', tip:['连续几天观察同一件事','把变化按顺序写下来','写出你的发现'], sample:'10月5日 晴 今天绿豆泡在水里，皮皱了。10月7日 小芽冒了出来，白白嫩嫩。原来一颗小绿豆也能长出生命，真神奇！'},
+  {t:'我和____过一天', tip:['选一个神话或书中人物','想清楚一起去哪、做什么','写一件有趣的事'], sample:'我和孙悟空过一天。他带我翻筋斗云飞上天空，还帮农民伯伯降了暴雨。这一天又惊险又开心！'},
+  {t:'生活万花筒（写一件事）', tip:['选一件印象深刻的事','写清起因、经过、结果','写出当时的心情'], sample:'上周我和同学跳绳比赛。一开始我落后，后来想起老师说的“别慌”，我稳稳加速，最后超过了她。那一刻，我心里乐开了花。'},
+  {t:'记一次游戏', tip:['写清游戏名字和规则','写游戏时的热闹场面','写出你的感受'], sample:'体育课上我们玩“老鹰捉小鸡”。小明当老鹰左扑右闪，我这个“母鸡”拼命护着“小鸡”。大家笑成一团，可真开心！'},
+  {t:'写信', tip:['开头写称呼和问候','中间写想说的话','结尾写祝福和署名'], sample:'亲爱的表姐：你好！最近我很想你。我们学校开了运动会，我跑了第三名。等你回来，我们一起去放风筝吧！祝 学习进步 表妹 小雅'},
+  {t:'我的心儿怦怦跳', tip:['写一件让你紧张或激动的事','把心跳加速的感觉写具体','写出结果和心情'], sample:'第一次上台演讲，我的心儿怦怦直跳，手心全是汗。可当我看到老师鼓励的眼神，慢慢平静下来。讲完那一刻台下响起掌声，我骄傲极了！'}
+];
+const READINGS = [
+  {title:'盘古开天地（节选）', text:'很久很久以前，天和地还没有分开，宇宙像个大鸡蛋。有个叫盘古的巨人睡在里面。他醒来后抡起斧头猛劈，轻的东西上升变成了天，重的东西下降变成了地。盘古怕它们合拢，就头顶天、脚蹬地，站在中间。不知过了多少年，天地终于成形，盘古也累得倒下了。',
+   qs:[ {q:'盘古用什么把天和地分开？', o:['一把斧头','用双手','用身体'], a:0},
+        {q:'这个故事属于哪一类？', o:['神话故事','科学事实','新闻报道'], a:0} ]},
+  {title:'精卫填海（白话）', text:'传说太阳神炎帝的小女儿女娃去东海游玩，不幸淹死在海里。她死后变成一只叫“精卫”的小鸟，每天从西山衔来树枝和石子，投进东海，想把大海填平。大海嘲笑她，可精卫从不放弃，日复一日地飞着、投着。',
+   qs:[ {q:'精卫原来是谁？', o:['炎帝的小女儿','一只海鸟','一位渔夫'], a:0},
+        {q:'精卫为什么填海？', o:['不想让别人再被淹','喜欢玩石子','听大海的话'], a:0} ]},
+  {title:'蝙蝠和雷达（节选）', text:'蝙蝠在夜里飞行，靠的不是眼睛，而是嘴巴和耳朵配合起来探路。它一边飞一边发出超声波，超声波碰到障碍物就反射回来，传到耳朵里，蝙蝠就立刻改变方向。科学家模仿蝙蝠，给飞机装上了雷达，让飞机在夜里也能安全飞行。',
+   qs:[ {q:'蝙蝠夜里飞行靠什么探路？', o:['明亮的眼睛','嘴巴和耳朵发出超声波','翅膀发光'], a:1},
+        {q:'雷达的发明受谁启发？', o:['蝙蝠','小鸟','天上的星星'], a:0} ]}
+];
+const MATH_WORD = [
+  {q:'卫星绕地球一圈大约需要 114 分钟，21 圈大约需要多少分钟？', steps:['用乘法：114 × 21','114 × 21 = 2394'], a:'2394 分钟'},
+  {q:'一台电视机 3580 元，学校买 3 台需要多少元？', steps:['3580 × 3','= 10740'], a:'10740 元'},
+  {q:'一列火车 3 小时行驶 360 千米，照这样的速度，9 小时行驶多少千米？', steps:['先算1小时：360 ÷ 3 = 120','9 小时：120 × 9 = 1080'], a:'1080 千米'},
+  {q:'用简便方法计算：25 × 17 × 4', steps:['乘法交换律：25 × 4 × 17','= 100 × 17 = 1700'], a:'1700'},
+  {q:'一个数由 3 个千万、5 个十万和 7 个千组成，这个数是多少？', steps:['3个千万 = 30000000','5个十万 = 500000','7个千 = 7000','合起来 = 30507000'], a:'30507000'},
+  {q:'盒子里有 5 个红球、2 个白球，任意摸一个，摸到什么颜色球的可能性大？', steps:['红球数量比白球多','摸到红球的可能性大'], a:'红球'}
+];
+const REVIEW = [
+  {f:'大数的认识', b:'10个一万是十万，10个十万是一百万；数位顺序分：个级、万级、亿级。'},
+  {f:'近似数', b:'求近似数常用“四舍五入”法：尾数的最高位小于5就舍去，等于或大于5就向前一位进1。'},
+  {f:'线与角', b:'线段有2个端点；射线有1个端点；直线没有端点。两条直线相交成直角，就说它们互相垂直。'},
+  {f:'角的度量', b:'1周角=2平角=4直角；量角时量角器中心对顶点，0刻度线对边。'},
+  {f:'运算律', b:'加法交换律 a+b=b+a；乘法结合律 (a×b)×c=a×(b×c)；乘法分配律 a×(b+c)=a×b+a×c。'},
+  {f:'除法', b:'路程 = 速度 × 时间；被除数和除数同时乘或除以相同数（0除外），商不变。'},
+  {f:'生活中的负数', b:'0 既不是正数也不是负数；−5℃ 表示零下5摄氏度。'},
+  {f:'可能性', b:'事件分“一定、可能、不可能”；哪种数量多，摸到哪种的可能性就大。'}
+];
+const VOCAB = [
+  {en:'meet', zh:'遇见'},{en:'glad', zh:'高兴的'},{en:'help', zh:'帮助'},{en:'fire', zh:'火'},
+  {en:'feel', zh:'感觉'},{en:'happy', zh:'开心的'},{en:'sad', zh:'难过的'},{en:'tired', zh:'疲倦的'},
+  {en:'write', zh:'写'},{en:'swim', zh:'游泳'},{en:'sing', zh:'唱歌'},{en:'friend', zh:'朋友'},
+  {en:'tall', zh:'高的'},{en:'short', zh:'矮的'},{en:'school', zh:'学校'},{en:'library', zh:'图书馆'},
+  {en:'playground', zh:'操场'},{en:'apple', zh:'苹果'},{en:'banana', zh:'香蕉'},{en:'weather', zh:'天气'},
+  {en:'sunny', zh:'晴朗的'},{en:'rainy', zh:'下雨的'},{en:'circle', zh:'圆形'},{en:'star', zh:'星星'}
+];
+const EN_ESSAYS = [
+  {t:'My Friend（我的朋友）', tip:['写朋友的名字和样子','写他/她会做什么','写出为什么喜欢'], sample:'I have a good friend. Her name is Lucy. She is tall and thin. She can swim fast. We play together every day. I like her very much.'},
+  {t:'My Parents（我的父母）', tip:['写爸爸、妈妈是做什么的','写他们会做什么','表达你的爱'], sample:'My father is a doctor. He can help sick people. My mother is a teacher. She can sing songs. I love my parents.'},
+  {t:'My School（我的学校）', tip:['写学校里有什么','写你在哪里读书、玩耍','写出感受'], sample:'My school is big. We have a library and a playground. I read books in the library. I am happy at school.'},
+  {t:'My Favorite Weather（我最喜欢的天气）', tip:['写喜欢什么天气','写可以做什么','写出原因'], sample:'I like sunny days. The sun is warm. I can play outside with my friends. Sunny days make me happy.'}
+];
+const SPEAK = [
+  'Hello, I am new here.','I am glad to see you.',
+  'I can swim. Can you swim?','He is tall and thin. She is my friend.',
+  'What can you do? I can write and read.','How do you feel? I am happy.',
+  'This is our classroom. We read and write here.','How is the weather? It is sunny and warm.',
+  'What shape is it? It is a circle.','I like apples. They are sweet and red.'
+];
+
+/* ===================== 仪表盘 ===================== */
+function tile(mod, emo, t, d, badge){ return '<div class="tile" data-mod="'+mod+'"><span class="badge">'+badge+'</span><div class="emo">'+emo+'</div><div class="t">'+t+'</div><div class="d">'+d+'</div></div>'; }
+function section(color, title, tiles){
+  let h='<div class="section"><div class="sec-title"><span class="dot" style="background:'+color+'"></span>'+title+'</div><div class="grid">';
+  tiles.forEach(t=> h+=tile(t[0],t[1],t[2],t[3],t[4]||''));
+  return h+'</div></div>';
+}
+function home(){
+  current='home'; backBtn.style.display='none';
+  content.innerHTML =
+    section('#3b82f6','语文 · 人教版 🩵',[
+      ['poem','📜','古诗乐园','四上9首古诗+拼音+测验'],
+      ['essay','✍️','作文小帮手','单元习作题目+结构+随时写'],
+      ['read','📚','阅读理解','神话/寓言/说明文+选择题']]) +
+    section('#22c55e','数学 · 北师大版 💚',[
+      ['math','➕','口算天天练','随机出题+即时判分'],
+      ['mword','🧩','应用题','四上典型题+步骤讲解'],
+      ['review','⭐','复习重点','四上知识点翻卡']]) +
+    section('#a855f7','英语 · 沪教版 💜',[
+      ['vocab','🃏','单词卡片','四上单词+发音'],
+      ['eessay','📝','英语小作文','四上话题+范文'],
+      ['speak','🗣️','跟读练习','四上重点句跟读']]);
+  content.querySelectorAll('.tile').forEach(el=> el.onclick=()=> go(el.dataset.mod));
+  content.scrollTop=0;
+}
+
+/* ===================== 导航壳 ===================== */
+function shell(title, html){
+  current=title; backBtn.style.display='block';
+  content.innerHTML = '<div style="font-size:14px;font-weight:800;color:#ffd86b;margin:2px 0 12px">'+title+'</div>'+html;
+  content.scrollTop=0;
+}
+
+/* ===================== 语文：古诗 ===================== */
+function goPoem(){ shell('古诗乐园', '<div id="poemWrap"></div>'); renderPoemList(); }
+function renderPoemList(){
+  let h='<div class="muted" style="margin-bottom:10px">点一首古诗，看拼音、译文，还能“考考你”。</div><div class="grid">';
+  POEMS.forEach((p,i)=> h+='<div class="tile" data-i="'+i+'"><div class="emo">📜</div><div class="t">'+p.title+'</div><div class="d">'+p.dynasty+'·'+p.author+'</div></div>');
+  h+='</div>';
+  $('#poemWrap').innerHTML=h;
+  $('#poemWrap').querySelectorAll('.tile').forEach(el=> el.onclick=()=> renderPoem(+el.dataset.i));
+}
+function renderPoem(i){
+  const p=POEMS[i];
+  let lines='';
+  for(let k=0;k<p.lines.length;k++) lines+='<div class="pinyin">'+p.pin[k]+'</div><div class="poemline">'+p.lines[k]+'</div>';
+  const authors=shuffle(POEMS.map(x=>x.author).filter((v,idx,a)=>a.indexOf(v)===idx));
+  const opts=shuffle([p.author].concat(authors.filter(a=>a!==p.author).slice(0,2)));
+  let q='<div class="card"><div style="font-weight:700;margin-bottom:8px">考考你：《'+p.title+'》的作者是谁？</div>';
+  opts.forEach(o=> q+='<button class="opt" data-a="'+o+'">'+o+'</button>');
+  q+='<div class="feedback" id="pq"></div></div>';
+  $('#poemWrap').innerHTML='<div class="card"><div style="font-size:17px;font-weight:800">'+p.title+'</div>'+
+    '<div class="muted" style="margin:2px 0 10px">'+p.dynasty+' · '+p.author+'</div>'+lines+
+    '<div class="muted" style="margin-top:10px;line-height:1.7">'+p.mean+'</div>'+
+    '<div class="row" style="margin-top:10px"><button class="btn sm ghost" id="pback">← 返回列表</button><button class="btn sm" id="pread">🔊 朗读</button></div></div>'+q;
+  $('#pback').onclick=renderPoemList;
+  $('#pread').onclick=()=> speak(p.lines.join(' '),'zh-CN');
+  $('#poemWrap').querySelectorAll('.opt').forEach(b=> b.onclick=()=>{
+    const right=(b.dataset.a===p.author);
+    $('#poemWrap').querySelectorAll('.opt').forEach(x=>{ x.disabled=true; if(x.dataset.a===p.author) x.classList.add('ok'); });
+    if(!right) b.classList.add('no');
+    $('#pq').textContent= right?'✅ 答对啦！就是'+p.author+'。' : '❌ 不对哦，正确答案是 '+p.author+'。';
+    $('#pq').style.color= right?'#9dffb8':'#ffb3c0';
+  });
+}
+
+/* ===================== 语文：作文 ===================== */
+function goEssay(){ shell('作文小帮手', '<div id="ew"></div>'); renderEssayList(); }
+function renderEssayList(){
+  let h='<div class="muted" style="margin-bottom:10px">选一个题目，看写作小提示和范文，还能直接在下面写，自动帮你保存。</div><div class="grid">';
+  ESSAY_TOPICS.forEach((e,i)=> h+='<div class="tile" data-i="'+i+'"><div class="emo">✍️</div><div class="t">'+e.t+'</div><div class="d">点开写一写</div></div>');
+  h+='</div>';
+  $('#ew').innerHTML=h;
+  $('#ew').querySelectorAll('.tile').forEach(el=> el.onclick=()=> renderEssay(+el.dataset.i));
+}
+function renderEssay(i){
+  const e=ESSAY_TOPICS[i];
+  const saved=localStorage.getItem('essay_'+i)||'';
+  let tips=''; e.tip.forEach(t=> tips+='<span class="pill">'+t+'</span>');
+  $('#ew').innerHTML='<div class="card"><div style="font-size:17px;font-weight:800">题目：'+e.t+'</div>'+
+    '<div style="margin:8px 0">'+tips+'</div>'+
+    '<details style="margin-bottom:8px"><summary class="muted" style="cursor:pointer">👀 看范文参考</summary><div class="muted" style="margin-top:6px;line-height:1.7">'+e.sample+'</div></details>'+
+    '<textarea id="eta" placeholder="在这里写你的作文，写完点保存……">'+esc(saved)+'</textarea>'+
+    '<div class="row" style="margin-top:8px"><button class="btn" id="esave">💾 保存</button><button class="btn ghost sm" id="eclear">清空</button><button class="btn ghost sm" id="eback">← 返回</button><span class="muted" id="ecount"></span></div></div>';
+  const ta=$('#eta'), cnt=$('#ecount');
+  const upd=()=> cnt.textContent='已写 '+ta.value.length+' 字';
+  ta.oninput=upd; upd();
+  $('#eback').onclick=renderEssayList;
+  $('#esave').onclick=()=>{ localStorage.setItem('essay_'+i, ta.value); toast('已保存到本机 ✅'); };
+  $('#eclear').onclick=()=>{ ta.value=''; upd(); localStorage.removeItem('essay_'+i); toast('已清空'); };
+}
+
+/* ===================== 语文：阅读理解 ===================== */
+function goRead(){ shell('阅读理解', '<div id="rw"></div>'); renderReadList(); }
+function renderReadList(){
+  let h='<div class="muted" style="margin-bottom:10px">读短文，做选择题，做完看对错。</div><div class="grid">';
+  READINGS.forEach((r,i)=> h+='<div class="tile" data-i="'+i+'"><div class="emo">📚</div><div class="t">'+r.title+'</div><div class="d">'+(r.qs.length)+' 道小题</div></div>');
+  h+='</div>';
+  $('#rw').innerHTML=h;
+  $('#rw').querySelectorAll('.tile').forEach(el=> el.onclick=()=> renderRead(+el.dataset.i));
+}
+function renderRead(i){
+  const r=READINGS[i];
+  let h='<div class="card"><div style="font-weight:800;margin-bottom:6px">'+r.title+'</div><div class="muted" style="line-height:1.8">'+r.text+'</div></div>';
+  r.qs.forEach((q,qi)=>{
+    h+='<div class="card"><div style="font-weight:700;margin-bottom:6px">'+(qi+1)+'. '+q.q+'</div>';
+    q.o.forEach((o,oi)=> h+='<button class="opt" data-q="'+qi+'" data-o="'+oi+'">'+o+'</button>');
+    h+='<div class="feedback" id="rf'+qi+'"></div></div>';
+  });
+  h+='<button class="btn ghost sm" id="rback" style="margin-bottom:20px">← 返回</button>';
+  $('#rw').innerHTML=h;
+  $('#rback').onclick=renderReadList;
+  $('#rw').querySelectorAll('.opt').forEach(b=> b.onclick=()=>{
+    const qi=+b.dataset.q, oi=+b.dataset.o, right=(oi===r.qs[qi].a);
+    const group=$('#rw').querySelectorAll('.opt[data-q="'+qi+'"]');
+    group.forEach(x=>{ x.disabled=true; if(+x.dataset.o===r.qs[qi].a) x.classList.add('ok'); });
+    if(!right) b.classList.add('no');
+    const fb=$('#rf'+qi); fb.textContent= right?'✅ 答对了！' : '❌ 正确答案：'+r.qs[qi].o[r.qs[qi].a];
+    fb.style.color= right?'#9dffb8':'#ffb3c0';
+  });
+}
+
+/* ===================== 数学：口算 ===================== */
+let mathState={list:[],idx:0,right:0};
+function genMath(){
+  const types=['add','sub','mul','div'], t=types[Math.floor(Math.random()*4)];
+  let a,b,ans,s;
+  if(t==='add'){ a=Math.floor(Math.random()*90)+10; b=Math.floor(Math.random()*90)+10; ans=a+b; s=a+' + '+b+' = ?'; }
+  else if(t==='sub'){ a=Math.floor(Math.random()*90)+20; b=Math.floor(Math.random()*a)+1; ans=a-b; s=a+' − '+b+' = ?'; }
+  else if(t==='mul'){ a=Math.floor(Math.random()*9)+2; b=Math.floor(Math.random()*9)+2; ans=a*b; s=a+' × '+b+' = ?'; }
+  else { b=Math.floor(Math.random()*9)+2; ans=Math.floor(Math.random()*9)+2; a=b*ans; s=a+' ÷ '+b+' = ?'; }
+  return {s, ans};
+}
+function goMath(){ shell('口算天天练', '<div id="mw"></div>'); mathState={list:[],idx:0,right:0}; for(let i=0;i<10;i++) mathState.list.push(genMath()); renderMath(); }
+function renderMath(){
+  const q=mathState.list[mathState.idx];
+  $('#mw').innerHTML='<div class="card"><div class="score">第 '+(mathState.idx+1)+' / 10 题　答对：'+mathState.right+'</div>'+
+    '<div style="font-size:30px;font-weight:800;text-align:center;margin:14px 0">'+q.s+'</div>'+
+    '<input type="number" id="mins" inputmode="numeric" placeholder="写答案" style="width:100%;text-align:center;font-size:20px">'+
+    '<div class="row" style="margin-top:10px;justify-content:center"><button class="btn" id="mchk">检查</button><span class="feedback" id="mf"></span></div>'+
+    '<div class="row" style="margin-top:10px;justify-content:center"><button class="btn ghost sm" id="mskip">跳过</button></div></div>';
+  const inp=$('#mins'); inp.focus();
+  $('#mchk').onclick=()=>{ const v=inp.value.trim(); if(v===''){ toast('先写答案哦'); return; }
+    const ok=(+v===q.ans); const fb=$('#mf');
+    if(ok){ mathState.right++; fb.textContent='✅ 对了！'; fb.style.color='#9dffb8'; } else { fb.textContent='❌ 答案是 '+q.ans; fb.style.color='#ffb3c0'; }
+    setTimeout(nextMath, 700); };
+  $('#mskip').onclick=nextMath;
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') $('#mchk').click(); });
+  function nextMath(){ mathState.idx++; if(mathState.idx>=10){ renderMathEnd(); } else renderMath(); }
+}
+function renderMathEnd(){
+  const r=mathState.right;
+  let msg= r===10?'🏆 全对！太厉害了！' : r>=7?'🌟 很棒，再练练更稳！' : r>=5?'💪 及格啦，继续加油！' : '📖 多练口算，你会越来越快！';
+  $('#mw').innerHTML='<div class="card" style="text-align:center"><div style="font-size:30px">'+msg+'</div>'+
+    '<div class="score" style="font-size:18px;margin:10px 0">共 10 题，答对 '+r+' 题</div>'+
+    '<button class="btn" id="magain">🔄 再来一组</button></div>';
+  $('#magain').onclick=goMath;
+}
+
+/* ===================== 数学：应用题 ===================== */
+function goMword(){ shell('应用题', '<div id="xw"></div>'); let h='<div class="muted" style="margin-bottom:10px">先自己想一想，再点“看解答”。</div>';
+  MATH_WORD.forEach((m,i)=> h+='<div class="card"><div style="font-weight:700">'+m.q+'</div><details style="margin-top:8px"><summary class="muted" style="cursor:pointer">👀 看解答</summary><div class="muted" style="margin-top:6px;line-height:1.8">'+m.steps.map(s=>'· '+s).join('<br>')+'<br><b class="hl">答：'+m.a+'</b></div></details></div>');
+  $('#xw').innerHTML=h; }
+
+/* ===================== 数学：复习重点 ===================== */
+function goReview(){ shell('复习重点', '<div id="rv"></div>'); let h='<div class="muted" style="margin-bottom:10px">点卡片翻面，背一背知识点。</div><div class="grid">';
+  REVIEW.forEach((c,i)=> h+='<div class="tile flip" data-i="'+i+'"><div class="emo">⭐</div><div class="t">'+c.f+'</div><div class="d">点我翻面</div></div>');
+  h+='</div>'; $('#rv').innerHTML=h;
+  $('#rv').querySelectorAll('.flip').forEach(el=>{
+    const c=REVIEW[+el.dataset.i];
+    el.onclick=()=>{ const d=el.querySelector('.d'); if(el.classList.contains('done')){ d.textContent='点我翻面'; el.classList.remove('done'); } else { d.textContent=c.b; el.classList.add('done'); } };
+  });
+}
+
+/* ===================== 英语：单词 ===================== */
+function goVocab(){ shell('单词卡片', '<div id="vb"></div>'); let h='<div class="muted" style="margin-bottom:10px">点 🔊 听发音，点卡片看中文意思。</div><div class="grid">';
+  VOCAB.forEach((v,i)=> h+='<div class="tile vcard" data-i="'+i+'"><div class="emo">🔊</div><div class="t">'+v.en+'</div><div class="d">点我看意思</div></div>');
+  h+='</div>'; $('#vb').innerHTML=h;
+  $('#vb').querySelectorAll('.tile').forEach(el=>{
+    const v=VOCAB[+el.dataset.i];
+    el.onclick=()=>{ const d=el.querySelector('.d'); if(d.textContent==='点我看意思'){ d.textContent='🇨🇳 '+v.zh; speak(v.en,'en-US'); } else { d.textContent='点我看意思'; } };
+  });
+}
+
+/* ===================== 英语：小作文 ===================== */
+function goEessay(){ shell('英语小作文', '<div id="ee"></div>'); renderEessayList(); }
+function renderEessayList(){
+  let h='<div class="muted" style="margin-bottom:10px">选题目，看英文提示和范文，用英语写一写。</div><div class="grid">';
+  EN_ESSAYS.forEach((e,i)=> h+='<div class="tile" data-i="'+i+'"><div class="emo">📝</div><div class="t">'+e.t+'</div><div class="d">点开写</div></div>');
+  h+='</div>'; $('#ee').innerHTML=h;
+  $('#ee').querySelectorAll('.tile').forEach(el=> el.onclick=()=> renderEessay(+el.dataset.i));
+}
+function renderEessay(i){
+  const e=EN_ESSAYS[i]; const saved=localStorage.getItem('eessay_'+i)||'';
+  let tips=''; e.tip.forEach(t=> tips+='<span class="pill">'+t+'</span>');
+  $('#ee').innerHTML='<div class="card"><div style="font-size:16px;font-weight:800">'+e.t+'</div><div style="margin:8px 0">'+tips+'</div>'+
+    '<details style="margin-bottom:8px"><summary class="muted" style="cursor:pointer">👀 看范文</summary><div class="muted" style="margin-top:6px;line-height:1.7">'+esc(e.sample)+'</div></details>'+
+    '<textarea id="eta2" placeholder="Write your English here...">'+esc(saved)+'</textarea>'+
+    '<div class="row" style="margin-top:8px"><button class="btn" id="es2">💾 保存</button><button class="btn ghost sm" id="er2">🔊 读范文</button><button class="btn ghost sm" id="eb2">← 返回</button></div></div>';
+  const ta=$('#eta2');
+  $('#eb2').onclick=renderEessayList;
+  $('#er2').onclick=()=> speak(e.sample,'en-US');
+  $('#es2').onclick=()=>{ localStorage.setItem('eessay_'+i, ta.value); toast('Saved ✅'); };
+}
+
+/* ===================== 英语：跟读 ===================== */
+function goSpeak(){ shell('跟读练习', '<div id="sp"></div>'); let h='<div class="muted" style="margin-bottom:10px">点每句话的 🔊 听一听，跟着读。</div>';
+  SPEAK.forEach((s,i)=> h+='<div class="card"><div style="font-size:17px;font-weight:600">'+s+'</div><button class="btn sm" data-i="'+i+'" style="margin-top:8px">🔊 听一听</button></div>');
+  $('#sp').innerHTML=h;
+  $('#sp').querySelectorAll('.btn').forEach(b=> b.onclick=()=> speak(SPEAK[+b.dataset.i],'en-US'));
+}
+
+/* ===================== 路由 ===================== */
+function go(mod){
+  ({poem:goPoem, essay:goEssay, read:goRead, math:goMath, mword:goMword, review:goReview,
+    vocab:goVocab, eessay:goEessay, speak:goSpeak})[mod]();
+}
+backBtn.onclick=home;
+
+home();
+</script>
+</body>
+</html>
